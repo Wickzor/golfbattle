@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>THE SHOWDOWN 2026</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-red: #ff0055;
+            --neon-green: #39ff14;
+            --neon-gold: #ffd700;
+            --bg-color: #050505;
+            --card-bg: #1a1a1a;
+            --glass: rgba(0, 0, 0, 0.92);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Scrollbar styling */
+        .stage-grid::-webkit-scrollbar, .fighters-grid::-webkit-scrollbar { display: none; }
+        .stage-grid, .fighters-grid { -ms-overflow-style: none; scrollbar-width: none; }
+
+        body {
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+            text-align: center;
+            background-image: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.8)), url('vs-header.jpg'); 
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+            padding-bottom: 100px;
+            transition: background-image 0.8s ease-in-out;
+        }
+
+        /* --- CRT VIGNETTE & SCANLINES --- */
+        body::after {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)),
+                radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,1) 100%);
+            z-index: 9000;
+            background-size: 100% 2px, 3px 100%, 100% 100%;
+            pointer-events: none;
+        }
+
+        /* --- ANIMATIONS --- */
+        @keyframes crtTurnOn {
+            0% { transform: scale(1, 0.002); opacity: 0; filter: brightness(0); }
+            30% { transform: scale(1, 0.002); opacity: 1; filter: brightness(3); }
+            60% { transform: scale(1, 1); filter: brightness(1.5); }
+            100% { transform: scale(1, 1); filter: brightness(1); opacity: 1; }
+        }
+        @keyframes idleBreathing {
+            0% { transform: scale(1) translateY(0); }
+            50% { transform: scale(1.02) translateY(-2px); }
+            100% { transform: scale(1) translateY(0); }
+        }
+        @keyframes heroPan {
+            0% { transform: scale(1.0); }
+            100% { transform: scale(1.05); }
+        }
+        @keyframes glitch {
+            0% { text-shadow: 3px 3px 0px #333, 0 0 10px var(--neon-blue); }
+            20% { text-shadow: -2px -2px 0px var(--neon-red), 2px 2px 0px var(--neon-blue); }
+            100% { text-shadow: 3px 3px 0px #333, 0 0 10px var(--neon-blue); }
+        }
+        @keyframes flashWhite {
+            0% { background-color: white; opacity: 1; z-index: 99999; }
+            100% { background-color: transparent; opacity: 0; z-index: -1; }
+        }
+        @keyframes pulseBtn {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(255, 0, 85, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0); }
+        }
+        
+        /* ZOOM INTO TV ANIMATION (Riktar in sig mot skärmens mitt) */
+        @keyframes zoomIntoTV {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(9); opacity: 0; } /* Zoomar in djupt i skärmen */
+        }
+
+        /* --- BOOT SEQUENCE (ASPECT RATIO LOCKED) --- */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 10000;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        /* Denna container håller ALLTID bildens proportioner (16:9) och täcker skärmen */
+        .tv-aspect-container {
+            position: relative;
+            width: 100vw; 
+            height: 56.25vw; /* 16:9 ratio */
+            min-height: 100vh; 
+            min-width: 177.78vh; /* 16:9 ratio inverted */
+            transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1);
+            transform-origin: 50% 45%; /* Zoomar in mot mitten av bilden där TVn är */
+        }
+        
+        .tv-zoom-active {
+            animation: zoomIntoTV 1.5s forwards cubic-bezier(0.7, 0, 0.3, 1);
+        }
+
+        .tv-image {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* SKÄRMEN - Positionerad med % inuti den låsta containern */
+        .tv-screen-overlay {
+            position: absolute;
+            /* Kalibrerade koordinater för tv.png */
+            top: 37%;    
+            left: 37%;   
+            width: 26%;  /* Lite bredare */
+            height: 32%; /* Lite högre för att nå ner */
+            
+            background-color: #050505; 
+            color: var(--neon-green);
+            font-family: 'Press Start 2P', monospace;
+            
+            /* Dynamisk textstorlek baserat på containerns bredd */
+            font-size: 1.1cqw; 
+            container-type: inline-size;
+            
+            line-height: 1.6;
+            padding: 1.5%;
+            overflow: hidden;
+            display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;
+            box-shadow: inset 0 0 3cqw rgba(0,0,0,0.9);
+            opacity: 0.96;
+            border-radius: 1%;
+        }
+        
+        /* Fallback för äldre webbläsare */
+        @supports not (font-size: 1cqw) { .tv-screen-overlay { font-size: 1.0vw; } }
+
+        .boot-line { display: none; text-shadow: 0 0 0.3cqw var(--neon-green); white-space: nowrap;} 
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 9998; display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer;
+        }
+        .splash-logo {
+            font-family: 'Press Start 2P', cursive; color: var(--neon-gold);
+            font-size: 1.8rem; text-shadow: 4px 4px 0px #ff0000; margin-bottom: 20px;
+            line-height: 1.4; text-transform: uppercase; padding: 0 20px; max-width: 90%;
+        }
+        .insert-coin {
+            font-family: 'Press Start 2P', cursive; font-size: 1rem; color: var(--neon-green);
+            animation: blink 0.8s infinite step-end; margin-top: 40px;
+            padding: 15px 30px; border: 2px dashed var(--neon-green);
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* --- CONTENT WRAPPER --- */
+        #main-content { opacity: 0; display: none; padding-top: 90px; }
+        .crt-active { display: block !important; opacity: 1 !important; animation: crtTurnOn 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+
+        /* --- FLASH LAYER --- */
+        #flash-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; pointer-events: none; z-index: 10000; }
+
+        /* --- STICKY HUD --- */
+        .sticky-hud {
+            position: fixed; top: -120px; left: 0; width: 100%; height: 60px;
+            background: var(--glass); border-bottom: 2px solid var(--neon-blue);
+            z-index: 8000; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+            transition: top 1s 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        #sticky-timer { display: flex; gap: 15px; font-family: 'Press Start 2P', cursive; }
+        .timer-unit span { font-size: 0.8rem; color: var(--neon-gold); text-shadow: 2px 2px 0 #000; display: block; }
+        .timer-unit label { font-size: 0.4rem; color: #aaa; margin-top: 4px; font-family: sans-serif; }
+        
+        .mute-btn {
+            position: absolute; right: 20px; background: transparent; border: 1px solid #555;
+            color: #555; font-size: 1rem; cursor: pointer; padding: 5px 10px;
+        }
+        .mute-btn:hover { color: #fff; border-color: #fff; }
+
+        /* --- SECTIONS --- */
+        .section-container { max-width: 1000px; margin: 0 auto 60px auto; padding: 0 15px; }
+        
+        /* --- HERO BANNER --- */
+        .hero-banner {
+            width: 100%; margin-bottom: 40px; 
+            position: relative; overflow: hidden;
+            aspect-ratio: 16/9;
+            mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+            -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+        }
+        .hero-banner img { 
+            width: 100%; height: 100%; object-fit: cover; display: block; 
+            filter: contrast(1.1) saturate(1.2) hue-rotate(-5deg); 
+            animation: heroPan 20s ease-in-out infinite alternate;
+        }
+        .hero-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 100%);
+            z-index: 2; pointer-events: none;
+        }
+        .hero-date-stamp {
+            position: absolute; bottom: 20px; right: 0; background: var(--neon-red);
+            color: #fff; font-family: 'Press Start 2P'; font-size: 0.7rem;
+            padding: 10px 15px; clip-path: polygon(15% 0, 100% 0, 100% 100%, 0% 100%);
+            z-index: 3; box-shadow: 0 0 20px var(--neon-red);
+        }
+
+        /* --- VS CONTAINER --- */
+        .launch-pad-container { max-width: 800px; margin: 0 auto 60px auto; padding: 0 15px; }
+        .launch-status { font-family: 'Press Start 2P'; font-size: 0.7rem; color: #555; margin-bottom: 10px; letter-spacing: 2px; }
+        .vs-trigger {
+            position: relative; border: 4px solid #333; transition: all 0.4s ease;
+            cursor: not-allowed; overflow: hidden;
+        }
+        .vs-trigger img {
+            width: 100%; display: block;
+            filter: grayscale(100%) brightness(0.3) blur(2px); transition: all 0.4s ease;
+        }
+        .trigger-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100%; text-align: center; pointer-events: none;
+        }
+        .trigger-text {
+            font-family: 'Press Start 2P', cursive; font-size: 1.5rem; color: #555;
+            text-shadow: 2px 2px 0 #000; background: rgba(0,0,0,0.7); padding: 10px; display: inline-block;
+        }
+        .vs-trigger.ready { border-color: var(--neon-red); cursor: pointer; animation: pulseBtn 2s infinite; }
+        .vs-trigger.ready img { filter: grayscale(0%) brightness(1.1) contrast(1.1); }
+        .vs-trigger.ready .trigger-text {
+            color: #fff; text-shadow: 0 0 10px var(--neon-red); background: rgba(255, 0, 85, 0.8); font-size: 2rem;
+        }
+
+        /* STAKES */
+        .stakes-wrapper {
+            background: #111; border: 4px solid #333; border-radius: 15px;
+            padding: 20px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .stakes-wrapper::before {
+            content: "PRIZE MONITOR"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+            background: #000; color: #666; font-family: sans-serif; font-weight: bold;
+            font-size: 0.7rem; padding: 0 10px; border: 1px solid #333; letter-spacing: 2px;
+        }
+        .feast-frame { border: 2px solid #555; position: relative; overflow: hidden; background: #000; }
+        .feast-frame::after {
+            content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9); pointer-events: none;
+        }
+        .feast-frame img { width: 100%; display: block; filter: contrast(1.2) saturation(1.2); }
+        .feast-caption { margin-top: 15px; font-family: 'Press Start 2P', cursive; color: var(--neon-gold); font-size: 1rem; text-shadow: 2px 2px 0px #000; }
+        .feast-sub { color: #888; font-size: 0.8rem; margin-top: 8px; font-style: italic; padding: 0 10px; }
+
+        /* --- STAGE SELECT --- */
+        .stage-section {
+            text-align: center; margin-bottom: 60px; border: 1px solid #333;
+            padding: 30px 10px; background: rgba(0,0,0,0.3);
+        }
+        .stage-grid { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+        .stage-option {
+            width: 280px; height: 180px; border: 4px solid #444; border-radius: 12px;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s; position: relative;
+            overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            flex-shrink: 0; 
+        }
+        .stage-option img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.2s; filter: grayscale(100%) brightness(0.7); }
+        .stage-option:hover { transform: scale(1.05); border-color: var(--neon-blue); z-index: 5; }
+        .stage-option:hover img { filter: grayscale(0%) brightness(1); }
+        .stage-option.active-stage { border-color: var(--neon-green); box-shadow: 0 0 30px var(--neon-green); z-index: 5; }
+        .stage-option.active-stage img { filter: grayscale(0%) brightness(1.1); }
+        .stage-label {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: rgba(0,0,0,0.8); font-family: 'Press Start 2P'; font-size: 0.8rem;
+            padding: 10px 0; color: #fff; border-top: 2px solid #333;
+        }
+
+        /* CITY STATS */
+        .city-stats-container {
+            max-width: 600px; margin: 20px auto 0 auto; background: rgba(0,20,0,0.9);
+            border: 2px solid var(--neon-green); padding: 20px; display: none;
+            animation: crtTurnOn 0.3s ease-out; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+        .city-title {
+            color: var(--neon-green); font-family: 'Press Start 2P'; font-size: 1rem;
+            margin-bottom: 20px; border-bottom: 2px dashed var(--neon-green); padding-bottom: 10px; letter-spacing: 2px;
+        }
+
+        /* --- ROSTER --- */
+        .roster-title { font-size: 1.2rem; text-transform: uppercase; color: #aaa; margin-bottom: 25px; font-family: 'Press Start 2P', cursive; letter-spacing: 1px; }
+        .coach-section { margin-bottom: 50px; display: flex; flex-direction: column; align-items: center; }
+        .fighters-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 40px; }
+
+        .fighter-card, .coach-card {
+            background: var(--card-bg); border: 2px solid #333; width: 100%; max-width: 320px;
+            position: relative; transition: transform 0.1s; display: flex; flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        /* COACH */
+        .coach-card { border: 3px solid var(--neon-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.3); cursor: not-allowed; }
+        .coach-badge {
+            position: absolute; top: 10px; right: 10px; background: #333; color: #fff;
+            font-family: 'Press Start 2P'; font-size: 0.6rem; padding: 5px; border: 1px solid #666; z-index: 5;
+        }
+
+        .fighter-img-box { height: 400px; width: 100%; overflow: hidden; border-bottom: 4px solid #000; position: relative; flex-shrink: 0; }
+        .fighter-img { width: 100%; height: 100%; object-fit: cover; object-position: top center; filter: grayscale(100%) contrast(1.2); transition: filter 0.3s; }
+        
+        .fighter-card .fighter-img { animation: idleBreathing 3s ease-in-out infinite; }
+        .coach-card .fighter-img { filter: sepia(30%) hue-rotate(80deg) contrast(1.1); animation: idleBreathing 5s ease-in-out infinite; }
+
+        @media (min-width: 769px) {
+            .fighter-card:hover { transform: translateY(-10px); z-index: 10; cursor: pointer; }
+            .fighter-card.p1:hover { border-color: var(--neon-blue); box-shadow: 0 0 30px var(--neon-blue); }
+            .fighter-card.p1:hover .fighter-img { filter: grayscale(0%); }
+            .fighter-card.p2:hover { border-color: var(--neon-red); box-shadow: 0 0 30px var(--neon-red); }
+            .fighter-card.p2:hover .fighter-img { filter: grayscale(0%); }
+        }
+
+        .fighter-card.p1:active { border-color: var(--neon-blue); }
+        .fighter-card.p1.selected-mobile .fighter-img { filter: grayscale(0%); }
+        .fighter-card.p2:active { border-color: var(--neon-red); }
+        .fighter-card.p2.selected-mobile .fighter-img { filter: grayscale(0%); }
+
+        .fighter-card.selected-fighter { transform: scale(1.05); z-index: 20; }
+        .fighter-card.p1.selected-fighter { border-color: var(--neon-blue); box-shadow: 0 0 30px var(--neon-blue); }
+        .fighter-card.p1.selected-fighter .fighter-img { filter: grayscale(0%); }
+        .fighter-card.p2.selected-fighter { border-color: var(--neon-red); box-shadow: 0 0 30px var(--neon-red); }
+        .fighter-card.p2.selected-fighter .fighter-img { filter: grayscale(0%); }
+
+        .fighter-info { padding: 20px; text-align: left; background: linear-gradient(to bottom, #1a1a1a, #000); flex-grow: 1; }
+        .f-name { font-size: 1.5rem; text-transform: uppercase; margin-bottom: 5px; font-style: italic; }
+        .f-role { font-family: 'Press Start 2P', cursive; font-size: 0.6rem; color: #666; margin-bottom: 20px; }
+
+        /* ANIMATED STAT BARS */
+        .stats div { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; margin-bottom: 12px; color: #ddd; }
+        .stat-label { width: 45%; font-size:0.7rem; text-transform: uppercase;}
+        .stat-bar { width: 55%; height: 10px; background: #333; border: 1px solid #555; position: relative; transform: skewX(-20deg); }
+        .stat-fill { 
+            height: 100%; background: #fff; width: 0%; /* Starts at 0 */
+            box-shadow: 0 0 5px currentColor; 
+            transition: width 1s cubic-bezier(0.65, 0, 0.35, 1); /* Slick animation */
+        }
+
+        .pow-effect {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
+            background: #fff; color: #000; padding: 15px 20px;
+            font-family: 'Press Start 2P', cursive; font-size: 0.8rem; line-height: 1.4;
+            border: 4px solid #000; border-radius: 10px; box-shadow: 10px 10px 0 rgba(0,0,0,0.5); 
+            z-index: 9999; pointer-events: none; text-align: center; width: 90%; 
+        }
+        .pow-effect::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            border-width: 10px 10px 0; border-style: solid; border-color: #000 transparent transparent transparent;
+        }
+        @keyframes powAnimation {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+            70% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* END MODAL */
+        .end-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.96); z-index: 10001; display: none;
+            flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;
+            overflow-y: auto;
+        }
+        .end-fighter-img {
+            width: 200px; height: 200px; object-fit: cover; object-position: top center;
+            border-radius: 50%; border: 6px solid var(--neon-gold); box-shadow: 0 0 50px var(--neon-gold);
+            margin-bottom: 20px; animation: idleBreathing 2s infinite;
+        }
+        .end-modal h1 { font-size: 2rem; color: var(--neon-gold); text-shadow: 4px 4px 0 red; margin-bottom: 10px; text-transform: uppercase; }
+        .end-modal p { font-family: 'Press Start 2P', cursive; color: #fff; line-height: 1.5; font-size: 0.9rem; margin-bottom: 20px; }
+        .battleground-text { font-family: 'Russo One', sans-serif; font-size: 1.5rem; color: var(--neon-blue); margin-bottom: 20px !important; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .modal-timer { font-family: 'Press Start 2P', cursive; color: var(--neon-red); font-size: 1rem; margin-bottom: 30px !important; }
+        .voting-result { width: 100%; max-width: 500px; background: #111; padding: 20px; border: 2px solid #444; margin-bottom: 30px; }
+        .vote-bar { height: 30px; width: 100%; background: #222; display: flex; margin-top: 15px; border: 2px solid #fff; }
+        .vote-fill-blue { background: var(--neon-blue); color: black; display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', cursive; font-size: 0.7rem; width: 50%; transition: width 0.5s; }
+        .vote-fill-red { background: var(--neon-red); color: black; display: flex; align-items: center; justify-content: center; font-family: 'Press Start 2P', cursive; font-size: 0.7rem; width: 50%; transition: width 0.5s; }
+        
+        .modal-btns { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
+        .reset-btn { background: transparent; border: 2px solid #666; color: #888; padding: 15px 25px; font-family: 'Press Start 2P'; cursor: pointer; transition: 0.3s; font-size: 0.8rem;}
+        .reset-btn:hover { color: white; border-color: white; box-shadow: 0 0 15px rgba(255,255,255,0.3); }
+        
+        .share-btn {
+            background: #000; border: 2px solid var(--neon-gold); color: var(--neon-gold);
+            padding: 15px 25px; font-family: 'Press Start 2P'; font-size: 0.8rem; cursor: pointer;
+            transition: all 0.3s; text-transform: uppercase; box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+            display: flex; align-items: center; gap: 10px;
+        }
+        .share-btn:hover { background: var(--neon-gold); color: #000; box-shadow: 0 0 30px rgba(255, 215, 0, 0.6); }
+        .share-btn.copied { border-color: var(--neon-green); color: var(--neon-green); box-shadow: 0 0 30px var(--neon-green); }
+
+        footer { padding: 40px 20px; background: #000; border-top: 4px solid #222; font-family: 'Press Start 2P', cursive; font-size: 0.5rem; color: #444; line-height: 2; }
+
+        @media (max-width: 768px) {
+            .splash-logo { font-size: 1.5rem; }
+            .sticky-hud { height: 60px; top: -100px; }
+            .fight-overlay { font-size: 2.5rem; }
+            .fighter-img-box { height: 350px; }
+            .stage-option { width: 90%; height: 200px; margin-bottom: 10px; }
+            .trigger-text { font-size: 1rem; }
+            .modal-btns { flex-direction: column; }
+            .share-btn, .reset-btn { width: 100%; }
+            
+            /* TV ON MOBILE ADJUSTMENTS */
+            .tv-container { width: 100%; }
+            .tv-screen-overlay {
+                /* Liten justering för små skärmar */
+                font-size: 2.5vw; 
+                line-height: 1.4;
+            }
+
+            /* NYTT: Justering för Hero Banner på mobil */
+            .hero-banner {
+                aspect-ratio: 4/5; 
+                mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+                -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
+            }
+            .hero-banner img {
+                object-position: center bottom; 
+            }
+            
+            /* --- HORIZONTAL SCROLL FOR MOBILE --- */
+            .stage-grid, .fighters-grid {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                justify-content: flex-start;
+                padding-bottom: 20px; /* Space for scroll */
+                gap: 15px;
+            }
+
+            /* Cards in scroll */
+            .stage-option, .fighter-card {
+                scroll-snap-align: center;
+                flex: 0 0 85%; /* Shows 85% of card, peek at next */
+                width: auto; /* Override fixed width */
+                max-width: none;
+            }
+            
+            /* Fix height for stage options in scroll */
+            .stage-option { height: 200px; }
+            
+            /* Center align the first item visually if needed, or keep left aligned */
+            .stage-grid::before, .fighters-grid::before,
+            .stage-grid::after, .fighters-grid::after {
+                content: '';
+                flex: 0 0 7.5%; /* spacers to center active item */
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" loop>
+        <source src="theme.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-pick">
+        <source src="pick.m4a" type="audio/mp4">
+    </audio>
+    <audio id="sfx-fight">
+        <source src="fight.m4a" type="audio/mp4">
+    </audio>
+
+    <div id="flash-layer"></div>
+
+    <!-- BOOT SEQUENCE (FULLSCREEN TV - ASPECT LOCKED) -->
+    <div id="boot-screen">
+        <div class="tv-aspect-container">
+            <!-- TV BILDEN (Se till att den heter tv.png) -->
+            <img src="tv.png" alt="Retro TV Setup" class="tv-image">
+            
+            <!-- DYNAMISKA TEXTRUTAN - LÅST TILL TVN -->
+            <div class="tv-screen-overlay">
+                <div class="boot-line">POWER ON...</div>
+                <div class="boot-line">CHECKING CARTRIDGE... [OK]</div>
+                <div class="boot-line">NINTENDO (R) 2026</div>
+                <div class="boot-line">LOADING GOLF KOMBAT...</div>
+                <div class="boot-line">PLAYER 1 READY</div>
+                <div class="boot-line">PLAYER 2 READY</div>
+                <div class="boot-line">PRESS START</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="splash-screen">
+        <div class="splash-logo">THE GREAT GOLF BATTLE<br>OF THE FEAST</div>
+        <div style="color: #666; font-size: 0.7rem; margin-top: 10px; font-family: 'Press Start 2P';">WINNER EATS FREE - 2026 EDITION</div>
+        <div class="insert-coin">TAP TO START</div>
+    </div>
+
+    <!-- HUD -->
+    <div class="sticky-hud" id="hud">
+        <div id="sticky-timer">
+            <div class="timer-unit"><span id="days">00</span><label>D</label></div>
+            <div class="timer-unit"><span id="hours">00</span><label>T</label></div>
+            <div class="timer-unit"><span id="minutes">00</span><label>M</label></div>
+            <div class="timer-unit"><span id="seconds">00</span><label>S</label></div>
+        </div>
+        <button class="mute-btn" onclick="toggleMute()">🔊</button>
+    </div>
+
+    <div id="main-content">
+        
+        <!-- HERO SECTION (SEAMLESS) -->
+        <div class="section-container">
+            <div class="hero-banner">
+                <img src="hero-landscape.png" alt="Battle Poster">
+                <div class="hero-overlay"></div>
+                <div class="hero-date-stamp">AUG 16 // 2026</div>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <div class="stakes-wrapper">
+                <div class="feast-frame">
+                    <img src="feast.png" alt="Victory Feast">
+                </div>
+                <div class="feast-caption">WINNER TAKES ALL</div>
+                <div class="feast-sub">"The loser pays the bill. The winner feasts like a King."</div>
+            </div>
+        </div>
+
+        <div class="section-container">
+            
+            <div class="stage-section" id="stage-section">
+                <h3 style="font-family:'Press Start 2P'; font-size:1rem; color:#888; margin-bottom:25px;">SELECT BATTLEGROUND</h3>
+                
+                <div class="stage-grid">
+                    <div class="stage-option" onclick="selectStage('malmo', this)">
+                        <img src="malmo.png" alt="Malmö">
+                        <div class="stage-label">MALMÖ</div>
+                    </div>
+                    <div class="stage-option" onclick="selectStage('gotet', this)">
+                        <img src="gotet.png" alt="Göteborg">
+                        <div class="stage-label">GÖTET</div>
+                    </div>
+                </div>
+
+                <div id="city-stats" class="city-stats-container">
+                    <h4 id="city-name" class="city-title">CITY INTEL</h4>
+                    <div id="city-stats-bars" class="stats"></div>
+                </div>
+            </div>
+
+            <div class="coach-section">
+                <h2 class="roster-title" style="color:var(--neon-green)">THE COACH</h2>
+                <div class="coach-card">
+                    <div class="coach-badge">CPU</div>
+                    <div class="fighter-img-box">
+                        <img src="elias.jpg" alt="Coach" class="fighter-img">
+                    </div>
+                    <div class="fighter-info">
+                        <div class="f-name" style="color: var(--neon-green);">ELIAS</div>
+                        <div class="f-role">OFFICIAL JUDGE</div>
+                        <div class="stats">
+                            <div><span class="stat-label">WISDOM</span> <div class="stat-bar"><div class="stat-fill" data-val="100" style="width:0%; background:var(--neon-green)"></div></div></div>
+                            <div><span class="stat-label">SWING</span> <div class="stat-bar"><div class="stat-fill" data-val="90" style="width:0%; background:var(--neon-green)"></div></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="fighter-section">
+                <h2 class="roster-title" style="color:var(--neon-red)">SELECT FIGHTER</h2>
+                <div class="fighters-grid">
+                    
+                    <div class="fighter-card p1" id="card-niklas" onclick="selectFighter(this, 'NIKLAS', 'blue')">
+                        <div class="fighter-img-box">
+                            <img src="niklas.jpg" alt="Niklas" class="fighter-img">
+                        </div>
+                        <div class="fighter-info">
+                            <div class="f-name" style="color: var(--neon-blue);">NIKLAS</div>
+                            <div class="f-role">PLAYER 1</div>
+                            <div class="stats">
+                                <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="80" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                                <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                                <div><span class="stat-label">MENTAL</span> <div class="stat-bar"><div class="stat-fill" data-val="60" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fighter-card p2" id="card-christian" onclick="selectFighter(this, 'CHRISTIAN', 'red')">
+                        <div class="fighter-img-box">
+                            <img src="christian.jpg" alt="Christian" class="fighter-img">
+                        </div>
+                        <div class="fighter-info">
+                            <div class="f-name" style="color: var(--neon-red);">CHRISTIAN</div>
+                            <div class="f-role">PLAYER 2</div>
+                            <div class="stats">
+                                <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-red)"></div></div></div>
+                                <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="70" style="width:0%; background:var(--neon-red)"></div></div></div>
+                                <div><span class="stat-label">DOG</span> <div class="stat-bar"><div class="stat-fill" data-val="100" style="width:0%; background:var(--neon-red)"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="launch-pad-container">
+                <div class="launch-status" id="launch-status">AWAITING BATTLE DATA...</div>
+                <div class="vs-trigger" id="vs-trigger" onclick="initiateBattle()">
+                    <img src="vs-header.jpg" alt="Start Battle">
+                    <div class="trigger-overlay">
+                        <div class="trigger-text" id="trigger-text">LOCKED</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <footer>
+            <p>ROUND 1 STARTS 09:00 AM /// 2026-08-16</p>
+            <p>© 2026 STREET GOLF FEDERATION</p>
+        </footer>
+
+    </div>
+
+    <div id="end-modal" class="end-modal">
+        <h1 id="end-title">BATTLE INITIATED</h1>
+        <img id="end-img" src="" class="end-fighter-img" style="display:none;">
+        <p id="end-msg">GREAT CHOICE.<br>SEE YOU ON THE COURT.</p>
+        <div class="battleground-text" id="end-stage-text">BATTLEGROUND: UNKNOWN</div>
+        <div class="modal-timer">
+            TIME UNTIL DESTRUCTION:<br>
+            <span id="end-countdown">00d 00h 00m 00s</span>
+        </div>
+        <div class="voting-result">
+            <p style="margin-bottom:10px; font-size:0.7rem; color:#888;">LIVE BETTING ODDS</p>
+            <div class="vote-bar">
+                <div class="vote-fill-blue" style="width: 50%">NIKLAS 50%</div>
+                <div class="vote-fill-red" style="width: 50%">CHRISTIAN 50%</div>
+            </div>
+        </div>
+        <div class="modal-btns">
+            <button id="share-btn" class="share-btn" onclick="copyLink()">🔗 COPY HYPE LINK</button>
+            <button class="reset-btn" onclick="resetGame()">MAIN MENU</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, onValue, runTransaction } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA-o3RD6TOET-xCWYFHpYQ9TgAHcpuJGCA",
+            authDomain: "cngolfbattle2026.firebaseapp.com",
+            databaseURL: "https://cngolfbattle2026-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "cngolfbattle2026",
+            storageBucket: "cngolfbattle2026.firebasestorage.app",
+            messagingSenderId: "715249347292",
+            appId: "1:715249347292:web:a733b97f296f15b6dba219",
+            measurementId: "G-LG6RH9X1VJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const votesRef = ref(db, 'votes');
+
+        onValue(votesRef, (snapshot) => {
+            const data = snapshot.val() || { niklas: 0, christian: 0 };
+            const total = (data.niklas || 0) + (data.christian || 0);
+            
+            let niklasPct = 50;
+            let christianPct = 50;
+
+            if (total > 0) {
+                niklasPct = Math.round(((data.niklas || 0) / total) * 100);
+                christianPct = 100 - niklasPct;
+            }
+
+            const blueBar = document.querySelector('.vote-fill-blue');
+            const redBar = document.querySelector('.vote-fill-red');
+            
+            if(blueBar && redBar) {
+                blueBar.style.width = niklasPct + "%";
+                blueBar.innerText = `NIKLAS ${niklasPct}%`;
+                redBar.style.width = christianPct + "%";
+                redBar.innerText = `CHRISTIAN ${christianPct}%`;
+            }
+        });
+
+        window.vibrate = function(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+        
+        window.toggleMute = function() {
+            const music = document.getElementById('bg-music');
+            if(music.muted) {
+                music.muted = false;
+                document.querySelector('.mute-btn').innerText = "🔊";
+            } else {
+                music.muted = true;
+                document.querySelector('.mute-btn').innerText = "🔇";
+            }
+        }
+        
+        // Boot Sequence with Zoom
+        const splash = document.getElementById('splash-screen');
+        const main = document.getElementById('main-content');
+        const hud = document.getElementById('hud');
+        const music = document.getElementById('bg-music');
+        const bootScreen = document.getElementById('boot-screen');
+        const tvContainer = document.querySelector('.tv-aspect-container');
+
+        window.onload = function() {
+            const lines = document.querySelectorAll('.boot-line');
+            let delay = 0;
+            lines.forEach((line, index) => {
+                setTimeout(() => {
+                    line.style.display = 'block';
+                    window.vibrate(20);
+                }, delay);
+                delay += 750; // Saktade ner igen för retro-känslan (750ms)
+            });
+
+            // Trigger Zoom after text is done
+            setTimeout(() => {
+                tvContainer.classList.add('tv-zoom-active');
+                
+                // Hide boot and show splash after zoom
+                setTimeout(() => {
+                    bootScreen.style.display = 'none';
+                    splash.style.display = 'flex';
+                }, 1200); // Match animation time
+            }, delay + 1000);
+        };
+
+        splash.addEventListener('click', () => {
+            window.vibrate(50);
+            music.volume = 0.5;
+            music.play().catch(e => console.log("Audio prevented"));
+            splash.style.opacity = '0';
+            setTimeout(() => {
+                splash.style.display = 'none';
+                main.classList.add('crt-active');
+                hud.style.top = '0';
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.fighter-info .stat-fill').forEach(bar => {
+                        bar.style.width = bar.getAttribute('data-val') + "%";
+                    });
+                }, 500);
+            }, 500);
+        });
+
+        const fightDate = new Date("Aug 16, 2026 09:00:00").getTime();
+        setInterval(() => {
+            const now = new Date().getTime();
+            const diff = fightDate - now;
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+            document.getElementById("days").innerText = d;
+            document.getElementById("hours").innerText = h < 10 ? "0"+h : h;
+            document.getElementById("minutes").innerText = m < 10 ? "0"+m : m;
+            document.getElementById("seconds").innerText = s < 10 ? "0"+s : s;
+
+            const modalTimer = document.getElementById("end-countdown");
+            if(modalTimer) modalTimer.innerText = d + "d " + (h<10?"0"+h:h) + "h " + (m<10?"0"+m:m) + "m " + (s<10?"0"+s:s) + "s";
+        }, 1000);
+
+        const fightSfx = document.getElementById('sfx-fight');
+        const vsTrigger = document.getElementById('vs-trigger');
+        const triggerText = document.getElementById('trigger-text');
+        const launchStatus = document.getElementById('launch-status');
+        const vsBox = document.getElementById('vs-box');
+
+        window.desktopHoverFight = function() {
+            if (matchMedia('(hover: hover)').matches) {
+                if(fightSfx.paused) {
+                    fightSfx.volume = 1.0;
+                    fightSfx.play();
+                }
+            }
+        }
+
+        window.mobileTapFight = function() {
+            fightSfx.currentTime = 0;
+            fightSfx.play();
+            window.vibrate(200);
+            vsBox.classList.add('active-mobile');
+            setTimeout(() => { vsBox.classList.remove('active-mobile'); }, 600);
+        }
+
+        let selectedStage = null;
+        let selectedFighter = null;
+
+        function checkReady() {
+            if (selectedStage && selectedFighter) {
+                vsTrigger.classList.add('ready');
+                triggerText.innerText = "INITIATE BATTLE";
+                launchStatus.innerText = "SYSTEMS READY // CLICK TO LAUNCH";
+                launchStatus.style.color = "var(--neon-green)";
+            }
+        }
+
+        const cityStatsContainer = document.getElementById('city-stats');
+        const cityName = document.getElementById('city-name');
+        const cityStatsBars = document.getElementById('city-stats-bars');
+
+        const stageData = {
+            'malmo': {
+                name: "MALMÖ SECTOR", bg: "malmo.png",
+                stats: [
+                    { label: "BILLIG FALAFEL", val: 95, color: "var(--neon-green)" },
+                    { label: "RISK FÖR RÅN", val: 90, color: "var(--neon-red)" },
+                    { label: "SKATTEINTÄKTER", val: 10, color: "#666" }
+                ]
+            },
+            'gotet': {
+                name: "GÖTEBORG ZONE", bg: "gotet.png",
+                stats: [
+                    { label: "FISKLUKT", val: 85, color: "var(--neon-blue)" },
+                    { label: "RISK FÖR REGN", val: 99, color: "var(--neon-blue)" },
+                    { label: "STATUS PÅ VÄSTLÄNKEN", val: 5, color: "var(--neon-red)" }
+                ]
+            }
+        };
+
+        window.selectStage = function(cityKey, el) {
+            window.vibrate(50);
+            selectedStage = stageData[cityKey].name;
+            document.querySelectorAll('.stage-option').forEach(opt => opt.classList.remove('active-stage'));
+            el.classList.add('active-stage');
+
+            document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${stageData[cityKey].bg}')`;
+
+            cityStatsContainer.style.display = "block";
+            cityName.innerText = stageData[cityKey].name;
+            
+            let html = "";
+            stageData[cityKey].stats.forEach(stat => {
+                html += `<div><span class="stat-label">${stat.label}</span><div class="stat-bar"><div class="stat-fill" data-city-val="${stat.val}" style="width:0%; background:${stat.color}"></div></div></div>`;
+            });
+            cityStatsBars.innerHTML = html;
+            
+            setTimeout(() => {
+                document.querySelectorAll('[data-city-val]').forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-city-val') + "%";
+                });
+            }, 50);
+            
+            checkReady();
+        }
+
+        // --- TRASH TALK QUOTES (CORRECTED & HARDCODED) ---
+        const quotesNiklas = [
+            "You want mos with that putt?",
+            "You're from Borås. Ofcourse you want to play in the swamp",
+            "I will DRIVE you crazy...",
+            "A fore, a boar, a golf noob from Borås.",
+            "I got that DOG in ME!! Oh wait, what did I just say...??"
+        ];
+
+        const quotesChristian = [
+            "Emmet putts better than you!",
+            "The only green you'll reach is in your pocket when you pay..",
+            "Alla heter FORE! i Göteborg.",
+            "You love fisk so much, you keep feeding them your balls!",
+            "Nice shot, Glenn. Trying to catch mackerel for dinner?"
+        ];
+        let nIdx = 0, cIdx = 0;
+
+        window.selectFighter = function(element, name, colorType) {
+            selectedFighter = name;
+            document.querySelectorAll('.fighter-card').forEach(c => c.classList.remove('selected-fighter'));
+            element.classList.add('selected-fighter');
+            
+            const sfx = document.getElementById('sfx-pick');
+            sfx.volume = 0.8; sfx.currentTime = 0; sfx.play().catch(e => console.log("SFX Fail")); 
+            window.vibrate(100);
+
+            const old = element.querySelector('.pow-effect'); if(old) old.remove();
+            const pow = document.createElement('div'); pow.classList.add('pow-effect');
+            
+            let quote = "";
+            if (name === 'NIKLAS') {
+                quote = quotesNiklas[nIdx]; nIdx = (nIdx + 1) % quotesNiklas.length;
+                pow.style.borderColor = "var(--neon-blue)";
+            } else {
+                quote = quotesChristian[cIdx]; cIdx = (cIdx + 1) % quotesChristian.length;
+                pow.style.borderColor = "var(--neon-red)";
+            }
+            pow.innerHTML = quote;
+            element.appendChild(pow);
+            pow.style.animation = "powAnimation 0.4s forwards";
+            setTimeout(() => { pow.style.animation = "fadeOut 0.5s forwards"; setTimeout(() => pow.remove(), 3000); }, 3000);
+            
+            checkReady();
+        }
+
+        window.initiateBattle = function() {
+            if (!selectedStage || !selectedFighter) {
+                vsTrigger.style.animation = "shake 0.5s";
+                setTimeout(()=> vsTrigger.style.animation="", 500);
+                return; 
+            }
+
+            // REGISTER VOTE
+            const fighterKey = selectedFighter.toLowerCase(); 
+            const specificRef = ref(db, `votes/${fighterKey}`);
+            runTransaction(specificRef, (currentVotes) => {
+                return (currentVotes || 0) + 1;
+            });
+
+            fightSfx.currentTime = 0; fightSfx.play(); window.vibrate(1000);
+            document.getElementById('flash-layer').style.animation = "flashWhite 0.5s forwards";
+
+            const endImg = document.getElementById('end-img');
+            document.getElementById('end-stage-text').innerText = "BATTLEGROUND: " + selectedStage;
+
+            if (selectedFighter === 'NIKLAS') {
+                endImg.src = "niklas.jpg"; endImg.style.display = "block";
+                endImg.style.borderColor = "var(--neon-blue)"; endImg.style.boxShadow = "0 0 30px var(--neon-blue)";
+            } else {
+                endImg.src = "christian.jpg"; endImg.style.display = "block";
+                endImg.style.borderColor = "var(--neon-red)"; endImg.style.boxShadow = "0 0 30px var(--neon-red)";
+            }
+
+            setTimeout(() => { document.getElementById('end-modal').style.display = "flex"; }, 200);
+        }
+
+        window.resetGame = function() {
+            document.getElementById('end-modal').style.display = "none";
+        }
+
+        window.copyLink = function() {
+            const btn = document.getElementById('share-btn');
+            const originalText = btn.innerHTML;
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                btn.innerHTML = "✅ LINK COPIED!";
+                btn.classList.add('copied');
+                window.vibrate(100);
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('copied');
+                }, 2500);
+            }).catch(err => {
+                btn.innerHTML = "❌ ERROR";
+                setTimeout(() => { btn.innerHTML = originalText; }, 2500);
+            });
+        }
+    </script>
+</body>
+</html>
