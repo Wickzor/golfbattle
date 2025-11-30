@@ -43,7 +43,25 @@
             transition: background-image 0.8s ease-in-out;
         }
 
-        /* --- CRT VIGNETTE & SCANLINES --- */
+        /* --- SCREEN SHAKE --- */
+        @keyframes shakeHard {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-3px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-active {
+            animation: shakeHard 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        /* --- CRT VIGNETTE & SCANLINES (GLOBAL) --- */
         body::after {
             content: " ";
             display: block;
@@ -89,33 +107,36 @@
             100% { box-shadow: 0 0 0 0 rgba(255, 0, 85, 0); }
         }
         
-        /* ZOOM INTO TV ANIMATION (Riktar in sig mot skärmens mitt) */
         @keyframes zoomIntoTV {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(9); opacity: 0; } /* Zoomar in djupt i skärmen */
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(12); opacity: 0; } 
         }
 
-        /* --- BOOT SEQUENCE (ASPECT RATIO LOCKED) --- */
+        @keyframes zoomIntoTVMobile {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(40); opacity: 0; } 
+        }
+
+        /* --- BOOT SEQUENCE --- */
         #boot-screen {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: #000; z-index: 10000;
-            display: flex; justify-content: center; align-items: center;
             overflow: hidden;
         }
 
-        /* Denna container håller ALLTID bildens proportioner (16:9) och täcker skärmen */
         .tv-aspect-container {
             position: relative;
             width: 100vw; 
-            height: 56.25vw; /* 16:9 ratio */
+            height: 56.25vw; /* 16:9 */
             min-height: 100vh; 
-            min-width: 177.78vh; /* 16:9 ratio inverted */
-            transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1);
-            transform-origin: 50% 45%; /* Zoomar in mot mitten av bilden där TVn är */
+            min-width: 177.78vh; 
+            transition: transform 1.5s ease-in;
+            transform-origin: 50% 42%; 
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
         }
         
         .tv-zoom-active {
-            animation: zoomIntoTV 1.5s forwards cubic-bezier(0.7, 0, 0.3, 1);
+            animation: zoomIntoTV 1.2s forwards cubic-bezier(0.7, 0, 0.3, 1);
         }
 
         .tv-image {
@@ -124,36 +145,27 @@
             display: block;
         }
 
-        /* SKÄRMEN - Positionerad med % inuti den låsta containern */
         .tv-screen-overlay {
             position: absolute;
-            /* Kalibrerade koordinater för tv.png */
-            top: 37%;    
-            left: 37%;   
-            width: 26%;  /* Lite bredare */
-            height: 32%; /* Lite högre för att nå ner */
-            
-            background-color: #050505; 
+            top: 42.5%; left: 40.2%; width: 21.5%; height: 26%; 
+            background-color: transparent; 
+            box-shadow: none; border-radius: 0;
             color: var(--neon-green);
             font-family: 'Press Start 2P', monospace;
-            
-            /* Dynamisk textstorlek baserat på containerns bredd */
-            font-size: 1.1cqw; 
+            font-size: 0.9cqw; 
             container-type: inline-size;
-            
-            line-height: 1.6;
-            padding: 1.5%;
+            line-height: 1.5; padding: 0;
             overflow: hidden;
             display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start;
-            box-shadow: inset 0 0 3cqw rgba(0,0,0,0.9);
-            opacity: 0.96;
-            border-radius: 1%;
         }
         
-        /* Fallback för äldre webbläsare */
-        @supports not (font-size: 1cqw) { .tv-screen-overlay { font-size: 1.0vw; } }
+        @supports not (font-size: 1cqw) { .tv-screen-overlay { font-size: 0.7vw; } }
 
-        .boot-line { display: none; text-shadow: 0 0 0.3cqw var(--neon-green); white-space: nowrap;} 
+        .boot-line { 
+            display: none; 
+            text-shadow: 0 0 0.4cqw var(--neon-green), 2px 2px 2px black; 
+            white-space: nowrap;
+        } 
 
         /* --- SPLASH SCREEN --- */
         #splash-screen {
@@ -204,14 +216,22 @@
         
         /* --- HERO BANNER --- */
         .hero-banner {
-            width: 100%; margin-bottom: 40px; 
-            position: relative; overflow: hidden;
+            width: 100%; 
+            margin-bottom: 40px; 
+            position: relative; 
+            overflow: hidden;
+            height: auto; 
             aspect-ratio: 16/9;
             mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
             -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
         }
+
         .hero-banner img { 
-            width: 100%; height: 100%; object-fit: cover; display: block; 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            object-position: center center; 
+            display: block; 
             filter: contrast(1.1) saturate(1.2) hue-rotate(-5deg); 
             animation: heroPan 20s ease-in-out infinite alternate;
         }
@@ -254,37 +274,45 @@
 
         /* STAKES */
         .stakes-wrapper {
-            background: #111; border: 4px solid #333; border-radius: 15px;
-            padding: 20px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 20px 0; position: relative;
         }
         .stakes-wrapper::before {
-            content: "PRIZE MONITOR"; position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
-            background: #000; color: #666; font-family: sans-serif; font-weight: bold;
-            font-size: 0.7rem; padding: 0 10px; border: 1px solid #333; letter-spacing: 2px;
+            content: "PRIZE MONITOR"; position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            background: transparent; color: #666; font-family: sans-serif; font-weight: bold;
+            font-size: 0.7rem; padding: 0 10px; letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(0,0,0,1); border: none;
         }
-        .feast-frame { border: 2px solid #555; position: relative; overflow: hidden; background: #000; }
+        .feast-frame { 
+            border: 2px solid #555; position: relative; overflow: hidden; background: #000; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px;
+        }
         .feast-frame::after {
             content: " "; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%);
             box-shadow: inset 0 0 20px rgba(0,0,0,0.9); pointer-events: none;
         }
         .feast-frame img { width: 100%; display: block; filter: contrast(1.2) saturation(1.2); }
-        .feast-caption { margin-top: 15px; font-family: 'Press Start 2P', cursive; color: var(--neon-gold); font-size: 1rem; text-shadow: 2px 2px 0px #000; }
-        .feast-sub { color: #888; font-size: 0.8rem; margin-top: 8px; font-style: italic; padding: 0 10px; }
+        .feast-caption { margin-top: 20px; font-family: 'Press Start 2P', cursive; color: var(--neon-gold); font-size: 1rem; text-shadow: 2px 2px 0px #000; }
+        .feast-sub { color: #aaa; font-size: 0.8rem; margin-top: 8px; font-style: italic; padding: 0 10px; }
 
         /* --- STAGE SELECT --- */
         .stage-section {
-            text-align: center; margin-bottom: 60px; border: 1px solid #333;
-            padding: 30px 10px; background: rgba(0,0,0,0.3);
+            text-align: center; margin-bottom: 60px; padding: 20px 0; border: none; background: transparent;
         }
         .stage-grid { display: flex; gap: 20px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
         .stage-option {
             width: 280px; height: 180px; border: 4px solid #444; border-radius: 12px;
             cursor: pointer; transition: transform 0.2s, border-color 0.2s; position: relative;
-            overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            flex-shrink: 0; 
+            overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.5); flex-shrink: 0; 
         }
-        .stage-option img { width: 100%; height: 100%; object-fit: cover; transition: filter 0.2s; filter: grayscale(100%) brightness(0.7); }
+        .stage-option img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            object-position: center center; 
+            transition: filter 0.2s; 
+            filter: grayscale(100%) brightness(0.7); 
+        }
         .stage-option:hover { transform: scale(1.05); border-color: var(--neon-blue); z-index: 5; }
         .stage-option:hover img { filter: grayscale(0%) brightness(1); }
         .stage-option.active-stage { border-color: var(--neon-green); box-shadow: 0 0 30px var(--neon-green); z-index: 5; }
@@ -297,9 +325,10 @@
 
         /* CITY STATS */
         .city-stats-container {
-            max-width: 600px; margin: 20px auto 0 auto; background: rgba(0,20,0,0.9);
-            border: 2px solid var(--neon-green); padding: 20px; display: none;
-            animation: crtTurnOn 0.3s ease-out; box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            max-width: 600px; margin: 20px auto 0 auto; 
+            background: rgba(0,20,0,0.8); border-top: 2px solid var(--neon-green); 
+            border-bottom: 2px solid var(--neon-green); border-left: none; border-right: none;
+            padding: 20px; display: none; animation: crtTurnOn 0.3s ease-out;
         }
         .city-title {
             color: var(--neon-green); font-family: 'Press Start 2P'; font-size: 1rem;
@@ -307,15 +336,39 @@
         }
 
         /* --- ROSTER --- */
-        .roster-title { font-size: 1.2rem; text-transform: uppercase; color: #aaa; margin-bottom: 25px; font-family: 'Press Start 2P', cursive; letter-spacing: 1px; }
+        .roster-title { font-size: 1.2rem; text-transform: uppercase; color: #fff; margin-bottom: 25px; font-family: 'Press Start 2P', cursive; letter-spacing: 1px; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
         .coach-section { margin-bottom: 50px; display: flex; flex-direction: column; align-items: center; }
-        .fighters-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 40px; }
+        .fighters-grid { display: flex; justify-content: center; flex-wrap: wrap; gap: 40px; position: relative; }
 
+        .swipe-hint {
+            display: none; position: absolute; top: -40px; right: 20px;
+            color: var(--neon-blue); font-family: 'Press Start 2P'; font-size: 0.7rem;
+            animation: swipeHintAnim 1.5s infinite;
+        }
+        @keyframes swipeHintAnim {
+            0%, 100% { transform: translateX(0); opacity: 0.5; }
+            50% { transform: translateX(10px); opacity: 1; }
+        }
+
+        /* --- 3D CARD STYLES --- */
         .fighter-card, .coach-card {
             background: var(--card-bg); border: 2px solid #333; width: 100%; max-width: 320px;
-            position: relative; transition: transform 0.1s; display: flex; flex-direction: column;
-            flex-shrink: 0;
+            position: relative; transition: transform 0.1s, box-shadow 0.2s; display: flex; flex-direction: column; flex-shrink: 0;
+            
+            /* 3D Properties */
+            transform-style: preserve-3d;
+            perspective: 1000px;
         }
+
+        /* Glans-effekt för 3D-korten */
+        .fighter-card::after {
+            content: "";
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(125deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,0.2) 47%, rgba(255,255,255,0) 53%, rgba(255,255,255,0) 100%);
+            opacity: 0; transition: opacity 0.3s;
+            pointer-events: none; z-index: 15;
+        }
+        .fighter-card:hover::after { opacity: 1; }
 
         /* COACH */
         .coach-card { border: 3px solid var(--neon-green); box-shadow: 0 0 20px rgba(57, 255, 20, 0.3); cursor: not-allowed; }
@@ -331,7 +384,6 @@
         .coach-card .fighter-img { filter: sepia(30%) hue-rotate(80deg) contrast(1.1); animation: idleBreathing 5s ease-in-out infinite; }
 
         @media (min-width: 769px) {
-            .fighter-card:hover { transform: translateY(-10px); z-index: 10; cursor: pointer; }
             .fighter-card.p1:hover { border-color: var(--neon-blue); box-shadow: 0 0 30px var(--neon-blue); }
             .fighter-card.p1:hover .fighter-img { filter: grayscale(0%); }
             .fighter-card.p2:hover { border-color: var(--neon-red); box-shadow: 0 0 30px var(--neon-red); }
@@ -343,7 +395,7 @@
         .fighter-card.p2:active { border-color: var(--neon-red); }
         .fighter-card.p2.selected-mobile .fighter-img { filter: grayscale(0%); }
 
-        .fighter-card.selected-fighter { transform: scale(1.05); z-index: 20; }
+        .fighter-card.selected-fighter { transform: scale(1.05) !important; z-index: 20; }
         .fighter-card.p1.selected-fighter { border-color: var(--neon-blue); box-shadow: 0 0 30px var(--neon-blue); }
         .fighter-card.p1.selected-fighter .fighter-img { filter: grayscale(0%); }
         .fighter-card.p2.selected-fighter { border-color: var(--neon-red); box-shadow: 0 0 30px var(--neon-red); }
@@ -422,56 +474,65 @@
             .sticky-hud { height: 60px; top: -100px; }
             .fight-overlay { font-size: 2.5rem; }
             .fighter-img-box { height: 350px; }
-            .stage-option { width: 90%; height: 200px; margin-bottom: 10px; }
-            .trigger-text { font-size: 1rem; }
+            .stage-option { width: 90%; margin-bottom: 10px; }
+            .trigger-text { font-size: 1rem; white-space: nowrap;}
             .modal-btns { flex-direction: column; }
             .share-btn, .reset-btn { width: 100%; }
             
             /* TV ON MOBILE ADJUSTMENTS */
             .tv-container { width: 100%; }
             .tv-screen-overlay {
-                /* Liten justering för små skärmar */
                 font-size: 2.5vw; 
                 line-height: 1.4;
             }
 
-            /* NYTT: Justering för Hero Banner på mobil */
-            .hero-banner {
-                aspect-ratio: 4/5; 
-                mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-                -webkit-mask-image: linear-gradient(to bottom, black 90%, transparent 100%);
-            }
+            /* HERO BANNER FIX */
             .hero-banner img {
-                object-position: center bottom; 
+                object-position: center center;
+            }
+            .hero-date-stamp {
+                font-size: 0.5rem;
+                padding: 8px 12px;
             }
             
-            /* --- HORIZONTAL SCROLL FOR MOBILE --- */
+            /* COACH FIX */
+            .coach-card .fighter-img {
+                 object-fit: contain; 
+                 background: #000; 
+            }
+
+            /* SWIPE HINT POS */
+            .swipe-hint { 
+                display: block; 
+                top: 5px; 
+                right: 10px; 
+                z-index: 50;
+            }
+
+            /* HORIZONTAL SCROLL */
             .stage-grid, .fighters-grid {
                 display: flex;
                 flex-wrap: nowrap;
                 overflow-x: auto;
                 scroll-snap-type: x mandatory;
                 justify-content: flex-start;
-                padding-bottom: 20px; /* Space for scroll */
+                padding-bottom: 20px;
                 gap: 15px;
             }
-
-            /* Cards in scroll */
             .stage-option, .fighter-card {
                 scroll-snap-align: center;
-                flex: 0 0 85%; /* Shows 85% of card, peek at next */
-                width: auto; /* Override fixed width */
+                flex: 0 0 85%;
+                width: auto;
                 max-width: none;
             }
-            
-            /* Fix height for stage options in scroll */
             .stage-option { height: 200px; }
-            
-            /* Center align the first item visually if needed, or keep left aligned */
-            .stage-grid::before, .fighters-grid::before,
-            .stage-grid::after, .fighters-grid::after {
-                content: '';
-                flex: 0 0 7.5%; /* spacers to center active item */
+            .stage-section h3 {
+                color: #fff;
+                text-shadow: 0 0 10px var(--neon-blue);
+                font-size: 1rem;
+            }
+            .tv-zoom-active {
+                animation: zoomIntoTVMobile 1.2s forwards cubic-bezier(0.7, 0, 0.3, 1);
             }
         }
     </style>
@@ -490,16 +551,13 @@
 
     <div id="flash-layer"></div>
 
-    <!-- BOOT SEQUENCE (FULLSCREEN TV - ASPECT LOCKED) -->
     <div id="boot-screen">
         <div class="tv-aspect-container">
-            <!-- TV BILDEN (Se till att den heter tv.png) -->
             <img src="tv.png" alt="Retro TV Setup" class="tv-image">
             
-            <!-- DYNAMISKA TEXTRUTAN - LÅST TILL TVN -->
             <div class="tv-screen-overlay">
                 <div class="boot-line">POWER ON...</div>
-                <div class="boot-line">CHECKING CARTRIDGE... [OK]</div>
+                <div class="boot-line">CHECKING CARTRIDGE...</div>
                 <div class="boot-line">NINTENDO (R) 2026</div>
                 <div class="boot-line">LOADING GOLF KOMBAT...</div>
                 <div class="boot-line">PLAYER 1 READY</div>
@@ -509,14 +567,12 @@
         </div>
     </div>
 
-    <!-- START SCREEN -->
     <div id="splash-screen">
         <div class="splash-logo">THE GREAT GOLF BATTLE<br>OF THE FEAST</div>
         <div style="color: #666; font-size: 0.7rem; margin-top: 10px; font-family: 'Press Start 2P';">WINNER EATS FREE - 2026 EDITION</div>
         <div class="insert-coin">TAP TO START</div>
     </div>
 
-    <!-- HUD -->
     <div class="sticky-hud" id="hud">
         <div id="sticky-timer">
             <div class="timer-unit"><span id="days">00</span><label>D</label></div>
@@ -529,7 +585,6 @@
 
     <div id="main-content">
         
-        <!-- HERO SECTION (SEAMLESS) -->
         <div class="section-container">
             <div class="hero-banner">
                 <img src="hero-landscape.png" alt="Battle Poster">
@@ -551,7 +606,7 @@
         <div class="section-container">
             
             <div class="stage-section" id="stage-section">
-                <h3 style="font-family:'Press Start 2P'; font-size:1rem; color:#888; margin-bottom:25px;">SELECT BATTLEGROUND</h3>
+                <h3 style="font-family:'Press Start 2P'; font-size:1rem; color:#fff; text-shadow: 0 0 10px var(--neon-blue); margin-bottom:25px;">SELECT BATTLEGROUND</h3>
                 
                 <div class="stage-grid">
                     <div class="stage-option" onclick="selectStage('malmo', this)">
@@ -590,38 +645,42 @@
 
             <div id="fighter-section">
                 <h2 class="roster-title" style="color:var(--neon-red)">SELECT FIGHTER</h2>
-                <div class="fighters-grid">
-                    
-                    <div class="fighter-card p1" id="card-niklas" onclick="selectFighter(this, 'NIKLAS', 'blue')">
-                        <div class="fighter-img-box">
-                            <img src="niklas.jpg" alt="Niklas" class="fighter-img">
-                        </div>
-                        <div class="fighter-info">
-                            <div class="f-name" style="color: var(--neon-blue);">NIKLAS</div>
-                            <div class="f-role">PLAYER 1</div>
-                            <div class="stats">
-                                <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="80" style="width:0%; background:var(--neon-blue)"></div></div></div>
-                                <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-blue)"></div></div></div>
-                                <div><span class="stat-label">MENTAL</span> <div class="stat-bar"><div class="stat-fill" data-val="60" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                
+                <div style="position:relative;">
+                    <div class="swipe-hint">SWIPE >></div>
+                    <div class="fighters-grid">
+                        
+                        <div class="fighter-card p1" id="card-niklas" onclick="selectFighter(this, 'NIKLAS', 'blue')">
+                            <div class="fighter-img-box">
+                                <img src="niklas.jpg" alt="Niklas" class="fighter-img">
+                            </div>
+                            <div class="fighter-info">
+                                <div class="f-name" style="color: var(--neon-blue);">NIKLAS</div>
+                                <div class="f-role">PLAYER 1</div>
+                                <div class="stats">
+                                    <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="80" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                                    <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                                    <div><span class="stat-label">MENTAL</span> <div class="stat-bar"><div class="stat-fill" data-val="60" style="width:0%; background:var(--neon-blue)"></div></div></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="fighter-card p2" id="card-christian" onclick="selectFighter(this, 'CHRISTIAN', 'red')">
-                        <div class="fighter-img-box">
-                            <img src="christian.jpg" alt="Christian" class="fighter-img">
-                        </div>
-                        <div class="fighter-info">
-                            <div class="f-name" style="color: var(--neon-red);">CHRISTIAN</div>
-                            <div class="f-role">PLAYER 2</div>
-                            <div class="stats">
-                                <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-red)"></div></div></div>
-                                <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="70" style="width:0%; background:var(--neon-red)"></div></div></div>
-                                <div><span class="stat-label">DOG</span> <div class="stat-bar"><div class="stat-fill" data-val="100" style="width:0%; background:var(--neon-red)"></div></div></div>
+                        <div class="fighter-card p2" id="card-christian" onclick="selectFighter(this, 'CHRISTIAN', 'red')">
+                            <div class="fighter-img-box">
+                                <img src="christian.jpg" alt="Christian" class="fighter-img">
+                            </div>
+                            <div class="fighter-info">
+                                <div class="f-name" style="color: var(--neon-red);">CHRISTIAN</div>
+                                <div class="f-role">PLAYER 2</div>
+                                <div class="stats">
+                                    <div><span class="stat-label">DRIVE</span> <div class="stat-bar"><div class="stat-fill" data-val="95" style="width:0%; background:var(--neon-red)"></div></div></div>
+                                    <div><span class="stat-label">IRON</span> <div class="stat-bar"><div class="stat-fill" data-val="70" style="width:0%; background:var(--neon-red)"></div></div></div>
+                                    <div><span class="stat-label">DOG</span> <div class="stat-bar"><div class="stat-fill" data-val="100" style="width:0%; background:var(--neon-red)"></div></div></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
+                    </div>
                 </div>
             </div>
 
@@ -720,8 +779,18 @@
                 document.querySelector('.mute-btn').innerText = "🔇";
             }
         }
+
+        // --- STOP MUSIC ON TAB SWITCH / MINIMIZE ---
+        document.addEventListener('visibilitychange', () => {
+            const music = document.getElementById('bg-music');
+            if (document.hidden) {
+                // If the user hides the page, PAUSE the music.
+                music.pause();
+                // Optional: Update icon if you want, but safer to let user resume manually
+                // document.querySelector('.mute-btn').innerText = "🔇"; 
+            }
+        });
         
-        // Boot Sequence with Zoom
         const splash = document.getElementById('splash-screen');
         const main = document.getElementById('main-content');
         const hud = document.getElementById('hud');
@@ -737,18 +806,15 @@
                     line.style.display = 'block';
                     window.vibrate(20);
                 }, delay);
-                delay += 750; // Saktade ner igen för retro-känslan (750ms)
+                delay += 750;
             });
 
-            // Trigger Zoom after text is done
             setTimeout(() => {
                 tvContainer.classList.add('tv-zoom-active');
-                
-                // Hide boot and show splash after zoom
                 setTimeout(() => {
                     bootScreen.style.display = 'none';
                     splash.style.display = 'flex';
-                }, 1200); // Match animation time
+                }, 1200);
             }, delay + 1000);
         };
 
@@ -803,14 +869,6 @@
             }
         }
 
-        window.mobileTapFight = function() {
-            fightSfx.currentTime = 0;
-            fightSfx.play();
-            window.vibrate(200);
-            vsBox.classList.add('active-mobile');
-            setTimeout(() => { vsBox.classList.remove('active-mobile'); }, 600);
-        }
-
         let selectedStage = null;
         let selectedFighter = null;
 
@@ -841,7 +899,7 @@
                 stats: [
                     { label: "FISKLUKT", val: 85, color: "var(--neon-blue)" },
                     { label: "RISK FÖR REGN", val: 99, color: "var(--neon-blue)" },
-                    { label: "STATUS PÅ VÄSTLÄNKEN", val: 5, color: "var(--neon-red)" }
+                    { label: "VÄSTLÄNKEN", val: 5, color: "var(--neon-red)" }
                 ]
             }
         };
@@ -872,7 +930,6 @@
             checkReady();
         }
 
-        // --- TRASH TALK QUOTES (CORRECTED & HARDCODED) ---
         const quotesNiklas = [
             "You want mos with that putt?",
             "You're from Borås. Ofcourse you want to play in the swamp",
@@ -919,10 +976,22 @@
         }
 
         window.initiateBattle = function() {
-            if (!selectedStage || !selectedFighter) {
-                vsTrigger.style.animation = "shake 0.5s";
-                setTimeout(()=> vsTrigger.style.animation="", 500);
-                return; 
+            if (!selectedStage) {
+                const stageSection = document.getElementById('stage-section');
+                stageSection.scrollIntoView({behavior: "smooth", block: "center"});
+                stageSection.style.border = "2px solid red";
+                setTimeout(() => stageSection.style.border = "none", 1500);
+                window.vibrate(200);
+                return;
+            }
+            
+            if (!selectedFighter) {
+                const fighterSection = document.getElementById('fighter-section');
+                fighterSection.scrollIntoView({behavior: "smooth", block: "center"});
+                fighterSection.style.border = "2px solid red";
+                setTimeout(() => fighterSection.style.border = "none", 1500);
+                window.vibrate(200);
+                return;
             }
 
             // REGISTER VOTE
@@ -931,6 +1000,10 @@
             runTransaction(specificRef, (currentVotes) => {
                 return (currentVotes || 0) + 1;
             });
+
+            // --- SCREEN SHAKE EFFECT ---
+            document.body.classList.add('shake-active');
+            setTimeout(() => document.body.classList.remove('shake-active'), 500);
 
             fightSfx.currentTime = 0; fightSfx.play(); window.vibrate(1000);
             document.getElementById('flash-layer').style.animation = "flashWhite 0.5s forwards";
@@ -967,6 +1040,35 @@
             }).catch(err => {
                 btn.innerHTML = "❌ ERROR";
                 setTimeout(() => { btn.innerHTML = originalText; }, 2500);
+            });
+        }
+
+        // --- 3D TILT LOGIC (Desktop only) ---
+        if (matchMedia('(hover: hover)').matches) {
+            document.querySelectorAll('.fighter-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    if (card.classList.contains('selected-fighter')) return; // Dont rotate if selected
+
+                    const rect = card.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    const centerX = rect.width / 2;
+                    const centerY = rect.height / 2;
+                    
+                    const rotateX = ((y - centerY) / centerY) * -10; // Invert axis
+                    const rotateY = ((x - centerX) / centerX) * 10;
+
+                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+                });
+
+                card.addEventListener('mouseleave', () => {
+                    if (card.classList.contains('selected-fighter')) {
+                         card.style.transform = 'scale(1.05)'; // Keep scaled if selected
+                    } else {
+                         card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
+                    }
+                });
             });
         }
     </script>
